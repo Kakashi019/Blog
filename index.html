@@ -1,0 +1,461 @@
+﻿<!doctype html>
+<html lang="zh" style="color-scheme:light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>量子控制机柜交互图</title>
+<link rel="stylesheet" href="./visualize.css">
+<style>
+  :root { color-scheme: light !important; }
+  html, body { margin: 0; }
+  body { max-width: 1180px; margin: 0 auto; padding: 18px 14px; background: #ffffff; }
+</style>
+</head>
+<body>
+<div id="qcrack">
+  <style>
+    #qcrack .qc-arch { display: flex; align-items: stretch; }
+    #qcrack .qc-rackcol, #qcrack .qc-fridgecol { width: 302px; flex: none; display: flex; }
+    #qcrack .frame { border: 1px solid var(--border); border-radius: 10px; background: var(--card); padding: 10px; display: flex; flex-direction: column; flex: 1; min-width: 0; }
+    #qcrack .colhead { display: flex; align-items: baseline; gap: 8px; font-weight: 500; margin-bottom: 8px; flex-wrap: wrap; }
+    #qcrack .qc-bridge { flex: 1 1 0; min-width: 64px; position: relative; }
+    #qcrack .qc-bridge svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+    #qcrack .qc-fallback { display: none; align-items: center; justify-content: center; gap: 8px; padding: 10px 4px; color: var(--muted-foreground); }
+    #qcrack .qc-fallback svg { width: 15px; height: 15px; flex: none; }
+    @media (max-width: 767px) {
+      #qcrack .qc-arch { flex-direction: column; }
+      #qcrack .qc-bridge { display: none; }
+      #qcrack .qc-fallback { display: flex; }
+      #qcrack .qc-rackcol, #qcrack .qc-fridgecol { width: 100%; }
+    }
+    #qcrack .legend { display: flex; gap: 16px; flex-wrap: wrap; margin: 4px 0 12px; }
+    #qcrack .lg { display: inline-flex; align-items: center; gap: 6px; }
+    #qcrack .sw { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+    #qcrack .sw1 { background: var(--viz-series-1); }
+    #qcrack .sw2 { background: var(--viz-series-2); }
+    #qcrack .sw3 { background: var(--viz-series-3); }
+    #qcrack .mod { display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 10px; background: transparent; color: var(--foreground); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 6px; text-align: left; }
+    #qcrack .mod[aria-pressed="true"] { border-color: var(--primary); background: var(--accent); color: var(--accent-foreground); }
+    #qcrack .mod svg { width: 15px; height: 15px; flex: none; color: var(--muted-foreground); }
+    #qcrack .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+    #qcrack .d1 { background: var(--viz-series-1); }
+    #qcrack .d2 { background: var(--viz-series-2); }
+    #qcrack .d3 { background: var(--viz-series-3); }
+    #qcrack .dN { background: var(--muted-foreground); }
+    #qcrack .mname { min-width: 0; }
+    #qcrack .fbody { display: flex; flex: 1; min-height: 0; }
+    #qcrack .rails { position: relative; width: 12px; flex: none; margin-right: 4px; }
+    #qcrack .rail { position: absolute; top: 0; bottom: 0; width: 2px; opacity: 0.45; }
+    #qcrack .r1 { left: 1px; background: var(--viz-series-1); }
+    #qcrack .r2 { left: 5px; background: var(--viz-series-2); }
+    #qcrack .r3 { left: 9px; background: var(--viz-series-3); }
+    #qcrack .stages { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    #qcrack .stage { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; width: 100%; padding: 8px 6px; background: transparent; border: 0; border-top: 1px solid var(--border); border-radius: 0; text-align: left; color: var(--foreground); }
+    #qcrack .stage:first-child { border-top: 0; }
+    #qcrack .stage[aria-pressed="true"] { background: var(--accent); color: var(--accent-foreground); }
+    #qcrack .k1 { background: color-mix(in srgb, var(--blue) 3%, transparent); }
+    #qcrack .k2 { background: color-mix(in srgb, var(--blue) 6%, transparent); }
+    #qcrack .k3 { background: color-mix(in srgb, var(--blue) 9%, transparent); }
+    #qcrack .k4 { background: color-mix(in srgb, var(--blue) 12%, transparent); }
+    #qcrack .k5 { background: color-mix(in srgb, var(--blue) 15%, transparent); }
+    #qcrack .temp { width: 52px; flex: none; font-variant-numeric: tabular-nums; color: var(--muted-foreground); }
+    #qcrack .sname { flex: none; font-weight: 500; }
+    #qcrack .chips { display: flex; gap: 4px; flex-wrap: wrap; flex: 1; min-width: 130px; }
+    #qcrack .chip { border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+    #qcrack .c1 { border-color: color-mix(in srgb, var(--viz-series-1) 55%, transparent); color: var(--viz-series-1); }
+    #qcrack .c2 { border-color: color-mix(in srgb, var(--viz-series-2) 55%, transparent); color: var(--viz-series-2); }
+    #qcrack .c3 { border-color: color-mix(in srgb, var(--viz-series-3) 55%, transparent); color: var(--viz-series-3); }
+    #qcrack .cq { border-color: var(--primary); color: var(--primary); font-weight: 500; }
+    #qcrack .detail { margin-top: 12px; padding: 12px 14px; }
+    #qcrack .dhead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    #qcrack .dhead h3 { margin: 0; }
+    #qcrack .specs { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; margin: 10px 0 0; }
+    #qcrack .specs dd { margin: 0; }
+    @keyframes qcf { to { stroke-dashoffset: -24; } }
+    #qcrack .flow { stroke-dasharray: 5 7; animation: qcf 1.1s linear infinite; }
+    @media (prefers-reduced-motion: reduce) { #qcrack .flow { animation: none; } }
+  </style>
+
+  <h3>超导量子计算机：室温控制机柜 ↔ 稀释制冷机</h3>
+
+  <div class="nav nav-pills" role="tablist" aria-label="视图">
+    <button class="nav-link active" id="qc-tab-arch" role="tab" aria-controls="qc-arch-panel" aria-selected="true" type="button">机柜与信号链</button>
+    <button class="nav-link" id="qc-tab-scale" role="tab" aria-controls="qc-scale-panel" aria-selected="false" type="button">通道规模估算</button>
+  </div>
+
+  <div id="qc-arch-panel" role="tabpanel" aria-labelledby="qc-tab-arch">
+    <div class="legend">
+      <span class="lg"><span class="sw sw1"></span>XY 微波驱动（下发）</span>
+      <span class="lg"><span class="sw sw2"></span>Z 磁通偏置（下发）</span>
+      <span class="lg"><span class="sw sw3"></span>读出信号（回传）</span>
+    </div>
+
+    <div class="qc-arch">
+      <div class="qc-rackcol">
+        <div class="frame">
+          <div class="colhead">室温控制机柜 <span class="text-small text-muted">19″ 标准 · 42U</span></div>
+          <button type="button" class="mod" data-mod="server" aria-pressed="false">
+            <span class="dot dN"></span><i data-lucide="server" aria-hidden="true"></i><span class="mname">主控服务器 · 交换机</span>
+          </button>
+          <button type="button" class="mod" data-mod="clock" aria-pressed="false">
+            <span class="dot dN"></span><i data-lucide="timer" aria-hidden="true"></i><span class="mname">10 MHz 时钟 · 触发分配</span>
+          </button>
+          <button type="button" class="mod" data-mod="fpga" aria-pressed="false">
+            <span class="dot d1"></span><i data-lucide="cpu" aria-hidden="true"></i><span class="mname">实时控制处理器（FPGA）</span>
+          </button>
+          <button type="button" class="mod" data-mod="awg" aria-pressed="false">
+            <span class="dot d1"></span><i data-lucide="waves" aria-hidden="true"></i><span class="mname">任意波形发生器 AWG</span>
+          </button>
+          <button type="button" class="mod" data-mod="lo" aria-pressed="false">
+            <span class="dot d1"></span><i data-lucide="radio" aria-hidden="true"></i><span class="mname">微波本振源 LO</span>
+          </button>
+          <button type="button" class="mod" data-mod="mixer" aria-pressed="false">
+            <span class="dot d1"></span><i data-lucide="shuffle" aria-hidden="true"></i><span class="mname">上 / 下变频模块</span>
+          </button>
+          <button type="button" class="mod" data-mod="adc" aria-pressed="false">
+            <span class="dot d3"></span><i data-lucide="gauge" aria-hidden="true"></i><span class="mname">数据采集数字化仪 ADC</span>
+          </button>
+          <button type="button" class="mod" data-mod="dc" aria-pressed="false">
+            <span class="dot d2"></span><i data-lucide="zap" aria-hidden="true"></i><span class="mname">直流偏置源（磁通）</span>
+          </button>
+          <button type="button" class="mod" data-mod="pdu" aria-pressed="false">
+            <span class="dot dN"></span><i data-lucide="plug" aria-hidden="true"></i><span class="mname">配电 PDU · UPS</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="qc-bridge">
+        <svg class="qc-bridge-svg" aria-hidden="true"></svg>
+      </div>
+
+      <div class="qc-fridgecol">
+        <div class="frame">
+          <div class="colhead"><i data-lucide="snowflake" aria-hidden="true"></i>稀释制冷机 <span class="text-small text-muted">逐级降至 10 mK</span></div>
+          <div class="fbody">
+            <div class="rails" aria-hidden="true"><span class="rail r1"></span><span class="rail r2"></span><span class="rail r3"></span></div>
+            <div class="stages">
+              <button type="button" class="stage" data-stage="s300" aria-pressed="false">
+                <span class="temp">300 K</span><span class="sname">室温法兰</span>
+                <span class="chips"><span class="chip">同轴真空馈通</span></span>
+              </button>
+              <button type="button" class="stage k1" data-stage="s50" aria-pressed="false">
+                <span class="temp">50 K</span><span class="sname">一级冷板</span>
+                <span class="chips">
+                  <span class="chip c1">XY·20 dB 衰减</span>
+                  <span class="chip c1" data-tooltip="Eccosorb 滤波器，阻挡室温黑体红外辐射">Eccosorb 滤波</span>
+                  <span class="chip c3">RO·定向耦合器</span>
+                </span>
+              </button>
+              <button type="button" class="stage k2" data-stage="s4" aria-pressed="false">
+                <span class="temp">4 K</span><span class="sname">二级冷板</span>
+                <span class="chips">
+                  <span class="chip c1">XY·20 dB 衰减</span>
+                  <span class="chip c2">Z·低通滤波</span>
+                  <span class="chip c3" data-tooltip="低噪声放大器，增益约 40 dB，噪声温度几 K">RO·HEMT 低噪放</span>
+                </span>
+              </button>
+              <button type="button" class="stage k3" data-stage="sstill" aria-pressed="false">
+                <span class="temp">0.8 K</span><span class="sname">Still 板</span>
+                <span class="chips"><span class="chip c3" data-tooltip="阻止放大器背向噪声污染比特">RO·双级隔离器</span></span>
+              </button>
+              <button type="button" class="stage k4" data-stage="scp" aria-pressed="false">
+                <span class="temp">100 mK</span><span class="sname">冷板</span>
+                <span class="chips"><span class="chip c3" data-tooltip="行波参量放大器，增益约 20 dB，接近量子极限">RO·TWPA 参量放大</span></span>
+              </button>
+              <button type="button" class="stage k5" data-stage="smxc" aria-pressed="false">
+                <span class="temp">10 mK</span><span class="sname">混合室 MXC</span>
+                <span class="chips">
+                  <span class="chip cq">样品盒 · QPU</span>
+                  <span class="chip c1">XY·末级衰减</span>
+                  <span class="chip c2">Z·RC 滤波</span>
+                  <span class="chip c3">RO·双向隔离</span>
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="qc-fallback">
+      <i data-lucide="arrow-down" aria-hidden="true"></i>
+      <span>同轴线束进 / 出制冷机：XY、Z 下发，读出回传</span>
+    </div>
+
+    <p class="sr-only">示意图：左侧为 19 英寸室温控制机柜，自上而下为主控服务器、时钟分配、FPGA 实时处理器、任意波形发生器、微波本振、上下变频、采集数字化仪、直流偏置与配电；右侧为稀释制冷机，从 300 K 逐级降温到 10 mK 混合室，比特芯片位于最底层。三条信号链路：XY 微波驱动与 Z 磁通自机柜下发进入制冷机，读出信号经低温放大后回传采集。点击任一模块或温区查看说明。</p>
+
+    <div class="card detail" aria-live="polite">
+      <div class="dhead">
+        <h3 id="qc-d-name"></h3>
+        <span class="viz-badge" id="qc-d-role"></span>
+      </div>
+      <p id="qc-d-desc" style="margin-bottom:0"></p>
+      <dl class="specs" id="qc-d-specs"></dl>
+      <p class="text-small text-muted" id="qc-d-prod" style="margin-bottom:0"></p>
+    </div>
+  </div>
+
+  <div id="qc-scale-panel" role="tabpanel" aria-labelledby="qc-tab-scale" hidden>
+    <div class="viz-controls">
+      <label class="form-label" for="qc-qn">比特数 N = <span id="qc-qn-val" class="tabular-nums">64</span></label>
+      <input type="range" class="form-range" id="qc-qn" min="4" max="200" step="1" value="64">
+    </div>
+    <div class="viz-grid" aria-live="polite">
+      <div class="viz-stat card">
+        <div class="text-small text-muted">AWG / DAC 通道</div>
+        <div class="viz-stat-value tabular-nums" id="qc-s-dac">192</div>
+        <div class="text-small text-muted">XY 每比特 I+Q 两路，快速 Z 一路</div>
+      </div>
+      <div class="viz-stat card">
+        <div class="text-small text-muted">微波本振源</div>
+        <div class="viz-stat-value tabular-nums" id="qc-s-lo">72</div>
+        <div class="text-small text-muted">XY 载波 N 路 + 每条读出馈线 1 路</div>
+      </div>
+      <div class="viz-stat card">
+        <div class="text-small text-muted">进制冷机传输线</div>
+        <div class="viz-stat-value tabular-nums" id="qc-s-lines">146</div>
+        <div class="text-small text-muted">XY N + Z N + 读出馈线进 / 出</div>
+      </div>
+      <div class="viz-stat card">
+        <div class="text-small text-muted">估算控制机柜数</div>
+        <div class="viz-stat-value tabular-nums" id="qc-s-rack">3</div>
+        <div class="text-small text-muted">按每柜约 64 路 DAC 通道估算</div>
+      </div>
+    </div>
+    <p class="text-small text-muted" style="margin-bottom:0">假设：每比特独立 XY 与 Z 线；读出按 8 比特频分复用共享一条馈线；机柜数未含 LO、采集与时钟占位。实际系统常用多路复用与虚比特技术压缩通道数。</p>
+  </div>
+
+  <script>
+    (function () {
+      var root = document.getElementById('qcrack');
+
+      var DATA = {
+        server: { name: '主控服务器 · 交换机', role: '基础设施', desc: '运行量子程序编译器与实验编排调度（作业队列、自动校准流水线、数据存储），把量子电路编译为脉冲级指令经以太网 / PCIe 下发到机柜内各仪器，并回收判读结果做后处理。', specs: [['接口', '万兆以太网 / PCIe'], ['时延路径', '非实时，毫秒级'], ['典型负载', '编译、校准、数据后处理']], prod: '自建集群；测控软件如 QUA、ARTIQ 等' },
+        clock: { name: '10 MHz 时钟 · 触发分配', role: '基础设施', desc: '铷原子钟或 GPSDO 提供全局 10 MHz 参考，经分配放大器扇出到每台 AWG、本振与采集卡；触发分配盒让所有通道同源启动。所有仪器必须共时钟，否则多次平均的相干积累失效。', specs: [['参考频率', '10 MHz（铷钟 / GPSDO）'], ['触发抖动', '典型 < 50 ps'], ['扇出方式', '分配放大，每仪器一路']], prod: 'SRS FS740 及各测控厂商时钟分配套件' },
+        fpga: { name: '实时控制处理器（FPGA）', role: 'XY 驱动链', desc: 'FPGA 阵列执行量子程序的实时部分：纳秒级脉冲时序、条件分支与反馈（主动复位、实时纠错解码）、多比特同步调度，是整个机柜的「大脑」。', specs: [['时序分辨率', '约 1 ns'], ['反馈时延', '< 1 μs（判读→再驱动）'], ['编程接口', '脉冲级 DSL / 汇编']], prod: 'Quantum Machines OPX1000、ARTIQ/Sinara、是德 FPGA 模块' },
+        awg: { name: '任意波形发生器（AWG）', role: 'XY 驱动链', desc: '生成比特 XY 驱动与快速 Z 调制的基带波形（高斯、DRAG 等），输出 I/Q 两路给上变频模块。通道数随比特数线性增长，通常占据机柜大部分槽位。', specs: [['采样率', '1–2 GS/s'], ['垂直分辨率', '14–16 bit'], ['输出', '每比特 I+Q 两路']], prod: 'Zurich HDAWG、是德 M8133A、OPX、国产测控机箱' },
+        lo: { name: '微波本振源（LO）', role: 'XY 驱动链', desc: '4–8 GHz 低相噪合成器：作为 IQ 混频的上变频载波，并为读出馈线提供探测音。本振相噪直接混入驱动脉冲，是限制单比特门保真度的因素之一。', specs: [['频段', '4–8 GHz，覆盖比特跃迁'], ['相噪', '约 −110 dBc/Hz @10 kHz'], ['输出功率', '+10 dBm 量级']], prod: 'R&S SMA100B、是德 E8257D 等' },
+        mixer: { name: '上 / 下变频模块', role: 'XY 驱动链 / 读出链', desc: 'IQ 正交混频器把 AWG 基带搬移到微波频段（发射），并把制冷机回传的读出信号下变频回基带 / 中频（接收）；需定期校准 LO 泄漏与镜像抑制。', specs: [['变频方式', 'IQ 正交混频'], ['边带抑制', '校准后 > 40 dB'], ['功能', '发射上变频 + 接收下变频']], prod: '各厂商变频机箱（QMX、UH-QCO 等）' },
+        adc: { name: '数据采集数字化仪（ADC）', role: '读出链', desc: '高速 ADC 采样回传读出信号，数字下变频后按最优权重积分，在 I/Q 平面判定比特 0/1；判读结果交回实时处理器执行反馈分支。', specs: [['采样率', '1–2 GS/s'], ['处理', '数字下变频 + 加权积分'], ['判读时延', '约 1 μs 量级']], prod: 'Zurich UHFLI、是德 M3102A、OPX 内置采集' },
+        dc: { name: '直流偏置源（磁通）', role: 'Z 驱动链', desc: '多通道低噪声电压源为每个比特的 SQUID 提供磁通工作点偏置，并与快速 Z 波形合成，实现比特频率调制与耦合开关。', specs: [['分辨率', 'μV 级'], ['输出噪声', '低噪声设计，避免谱线展宽'], ['通道密度', '24–32 通道 / 台']], prod: '各测控厂商多通道低噪声偏置机箱' },
+        pdu: { name: '配电 PDU · UPS', role: '基础设施', desc: '滤波配电与在线式 UPS 供电，模拟 / 数字地分离布线，抑制工频与开关噪声窜入射频链路；满配控制机柜总功耗常达数千瓦。', specs: [['供电', '在线双变换 UPS'], ['布线', '模拟 / 数字地分离'], ['单柜功耗', '数 kW 量级']], prod: '机房级 PDU / UPS 与电源滤波器' },
+        s300: { name: '室温法兰 300 K', role: '低温级', desc: '制冷机顶部真空法兰：所有同轴线经真空馈通进入；入口处每条线加衰减与滤波，把室温热噪声压到量子噪声水平以下再向下传输。', specs: [['穿舱线数', '几十至上百条同轴'], ['入口处理', '10–20 dB 衰减 + 滤波']], prod: 'Bluefors、Oxford Instruments、国仪量子等稀释制冷机' },
+        s50: { name: '一级冷板 50 K', role: '低温级', desc: '脉冲管冷头第一级：微波线在此加 20 dB 衰减器与 Eccosorb 红外滤波器，阻挡 300 K 黑体辐射漏向低温端。', specs: [['温度', '约 50 K'], ['制冷功率', '约 50 W（脉冲管一级）'], ['热处理', '衰减 + 红外滤波']], prod: '' },
+        s4: { name: '二级冷板 4 K', role: '低温级', desc: '第二级 4 K：微波线再加 20 dB 衰减；读出输出线在此放置 HEMT 低噪声放大器，先把信号抬高约 40 dB 再往室温走，它决定系统噪声底线。', specs: [['温度', '约 4 K'], ['HEMT 增益', '约 40 dB'], ['HEMT 噪声温度', '约 2–5 K']], prod: 'Low Noise Factory、Cosmic Microwave 等 HEMT' },
+        sstill: { name: 'Still 板 约 0.8 K', role: '低温级', desc: '稀释制冷回路 Still 板：读出线串联两级隔离器（循环器），把 HEMT 的背向噪声与室温反射波挡在量子比特之外，保护相干时间。', specs: [['温度', '约 0.8 K'], ['隔离度', '双级合计约 40 dB']], prod: '' },
+        scp: { name: '冷板 约 100 mK', role: '低温级', desc: '末级之前的冷板：读出线经行波参量放大器（TWPA），增益约 20 dB、附加噪声接近量子极限；泵浦由室温微波源经定向耦合器注入。TWPA 是读出量子效率的关键器件。', specs: [['温度', '约 100 mK'], ['TWPA 增益', '约 20 dB'], ['泵浦', '室温源经定向耦合器注入']], prod: 'Verlinq 等厂商 JTWPA' },
+        smxc: { name: '混合室 MXC 约 10 mK', role: '低温级', desc: '制冷机最冷处，安装 QPU 样品盒：超导比特芯片与读出谐振腔。XY / Z 线在此完成末级衰减与低通滤波，读出线进出双向隔离。芯片工作在 10–20 mK，比星际深空还冷约 100 倍。', specs: [['温度', '10–20 mK'], ['热负载', '每条线仅贡献 μW 级热漏'], ['封装', '无磁样品盒 + 吸波材料']], prod: '各实验室 / 厂商量子芯片与封装' }
+      };
+
+      var qn = root.querySelector('#qc-qn');
+
+      function save() {
+        try {
+          if (window.zcode && window.zcode.setWidgetState) {
+            window.zcode.setWidgetState({ modelContent: { selected: cur, qubits: +qn.value } }).catch(function () {});
+          }
+        } catch (e) {}
+      }
+
+      var cur = null;
+      function select(id) {
+        var d = DATA[id];
+        if (!d) return;
+        cur = id;
+        var mods = root.querySelectorAll('.mod');
+        for (var i = 0; i < mods.length; i++) mods[i].setAttribute('aria-pressed', String(mods[i].getAttribute('data-mod') === id));
+        var st = root.querySelectorAll('.stage');
+        for (var j = 0; j < st.length; j++) st[j].setAttribute('aria-pressed', String(st[j].getAttribute('data-stage') === id));
+        root.querySelector('#qc-d-name').textContent = d.name;
+        root.querySelector('#qc-d-role').textContent = d.role;
+        root.querySelector('#qc-d-desc').textContent = d.desc;
+        var dl = root.querySelector('#qc-d-specs');
+        dl.textContent = '';
+        for (var k = 0; k < d.specs.length; k++) {
+          var dt = document.createElement('dt');
+          dt.textContent = d.specs[k][0];
+          dt.className = 'text-small text-muted';
+          var dd = document.createElement('dd');
+          dd.textContent = d.specs[k][1];
+          dl.appendChild(dt);
+          dl.appendChild(dd);
+        }
+        var pr = root.querySelector('#qc-d-prod');
+        pr.textContent = d.prod ? '典型设备：' + d.prod : '';
+        pr.style.display = d.prod ? '' : 'none';
+        save();
+      }
+
+      function updateScale(doSave) {
+        var n = +qn.value;
+        root.querySelector('#qc-qn-val').textContent = n;
+        var feeds = Math.max(1, Math.ceil(n / 8));
+        root.querySelector('#qc-s-dac').textContent = String(3 * n);
+        root.querySelector('#qc-s-lo').textContent = String(n + feeds);
+        root.querySelector('#qc-s-lines').textContent = String(2 * n + 2 * feeds);
+        root.querySelector('#qc-s-rack').textContent = String(Math.max(1, Math.ceil(3 * n / 64)));
+        if (doSave) save();
+      }
+
+      function cv(name) {
+        var v = getComputedStyle(root).getPropertyValue(name);
+        v = v.trim();
+        return v || 'currentColor';
+      }
+
+      function drawBridge() {
+        var bridge = root.querySelector('.qc-bridge');
+        var svg = root.querySelector('.qc-bridge-svg');
+        var br = bridge.getBoundingClientRect();
+        if (br.width < 40 || br.height < 40) return;
+        svg.setAttribute('viewBox', '0 0 ' + br.width + ' ' + br.height);
+        while (svg.firstChild) svg.removeChild(svg.firstChild);
+        var NS = 'http://www.w3.org/2000/svg';
+        var band = root.querySelector('[data-stage="s300"]');
+        if (!band) return;
+        var fr = band.getBoundingClientRect();
+        var fY = fr.top - br.top;
+        var fH = fr.height;
+        var defs = [
+          { src: '[data-mod="mixer"]', ty: fY + fH * 0.22, label: 'XY 微波驱动', color: cv('--viz-series-1'), sel: 'mixer', out: true },
+          { src: '[data-mod="dc"]', ty: fY + fH * 0.52, label: 'Z 磁通偏置', color: cv('--viz-series-2'), sel: 'dc', out: true },
+          { src: '[data-mod="adc"]', ty: fY + fH * 0.82, label: '读出回传', color: cv('--viz-series-3'), sel: 'adc', out: false }
+        ];
+        var labels = [];
+        defs.forEach(function (d) {
+          var el = root.querySelector(d.src);
+          if (!el) return;
+          var er = el.getBoundingClientRect();
+          var sy = er.top + er.height / 2 - br.top;
+          var x1 = d.out ? 0 : br.width, y1 = d.out ? sy : d.ty;
+          var x2 = d.out ? br.width : 0, y2 = d.out ? d.ty : sy;
+          var dx = Math.abs(x2 - x1) / 2;
+          var p = 'M ' + x1 + ',' + y1 + ' C ' + (x1 + (d.out ? dx : -dx)) + ',' + y1 + ' ' + (x2 + (d.out ? -dx : dx)) + ',' + y2 + ' ' + x2 + ',' + y2;
+          var g = document.createElementNS(NS, 'g');
+          g.setAttribute('class', 'cursor-interaction');
+          g.addEventListener('click', function () { select(d.sel); });
+          var path = document.createElementNS(NS, 'path');
+          path.setAttribute('d', p);
+          path.setAttribute('fill', 'none');
+          path.setAttribute('stroke', d.color);
+          path.setAttribute('stroke-width', '2');
+          path.setAttribute('class', 'flow');
+          var hit = document.createElementNS(NS, 'path');
+          hit.setAttribute('d', p);
+          hit.setAttribute('fill', 'none');
+          hit.setAttribute('stroke', 'rgba(0,0,0,0)');
+          hit.setAttribute('stroke-width', '16');
+          hit.setAttribute('pointer-events', 'stroke');
+          var ar = document.createElementNS(NS, 'polygon');
+          if (d.out) ar.setAttribute('points', x2 + ',' + y2 + ' ' + (x2 - 9) + ',' + (y2 - 4.5) + ' ' + (x2 - 9) + ',' + (y2 + 4.5));
+          else ar.setAttribute('points', '0,' + y2 + ' 9,' + (y2 - 4.5) + ' 9,' + (y2 + 4.5));
+          ar.setAttribute('fill', d.color);
+          g.appendChild(path);
+          g.appendChild(hit);
+          g.appendChild(ar);
+          svg.appendChild(g);
+          labels.push({ y: (y1 + y2) / 2 - 7, t: d.label, c: d.color });
+        });
+        labels.sort(function (a, b) { return a.y - b.y; });
+        for (var i = 1; i < labels.length; i++) {
+          if (labels[i].y - labels[i - 1].y < 15) labels[i].y = labels[i - 1].y + 15;
+        }
+        labels.forEach(function (L) {
+          var t = document.createElementNS(NS, 'text');
+          t.setAttribute('x', br.width / 2);
+          t.setAttribute('y', L.y);
+          t.setAttribute('text-anchor', 'middle');
+          t.setAttribute('font-size', '12');
+          t.setAttribute('fill', L.c);
+          t.textContent = L.t;
+          svg.appendChild(t);
+        });
+      }
+
+      var modBtns = root.querySelectorAll('.mod, .stage');
+      for (var b = 0; b < modBtns.length; b++) {
+        (function (btn) {
+          btn.addEventListener('click', function () {
+            select(btn.getAttribute('data-mod') || btn.getAttribute('data-stage'));
+          });
+        })(modBtns[b]);
+      }
+      qn.addEventListener('input', function () { updateScale(true); });
+
+      var restored = null;
+      try {
+        var ws = window.zcode && window.zcode.widgetState;
+        if (ws && ws.modelContent) restored = ws.modelContent;
+      } catch (e) {}
+      if (restored && restored.qubits >= 4 && restored.qubits <= 200) qn.value = restored.qubits;
+      updateScale(false);
+      select(restored && DATA[restored.selected] ? restored.selected : 'awg');
+
+      var arch = root.querySelector('.qc-arch');
+      if (window.ResizeObserver) new ResizeObserver(function () { drawBridge(); }).observe(arch);
+      var tl = root.querySelector('[role="tablist"]');
+      if (tl) tl.addEventListener('click', function () {
+        requestAnimationFrame(function () { requestAnimationFrame(drawBridge); });
+      });
+      drawBridge();
+      setTimeout(drawBridge, 400);
+      try {
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { drawBridge(); });
+      } catch (e) {}
+      window.addEventListener('zcode:set_globals', function (e) {
+        var g = e.detail && e.detail.globals;
+        var w2 = g && g.widgetState;
+        var mc = w2 && w2.modelContent;
+        if (!mc) return;
+        if (mc.qubits >= 4 && mc.qubits <= 200) { qn.value = mc.qubits; updateScale(false); }
+        if (DATA[mc.selected]) select(mc.selected);
+      });
+    })();
+  </script>
+</div>
+
+<script src="./lucide.js"></script>
+<script>
+function initVizTabs() {
+  var selector = '.nav[role="tablist"] [role="tab"]';
+  var disabled = ':disabled,[aria-disabled="true"]';
+  var selectTab = function (selected) {
+    var panelId = selected.getAttribute("aria-controls");
+    var tabs = selected.closest('[role="tablist"]').querySelectorAll('[role="tab"]');
+    for (var i = 0; i < tabs.length; i++) {
+      var tab = tabs[i];
+      var active = tab === selected;
+      tab.classList.toggle("active", active);
+      tab.setAttribute("aria-selected", String(active));
+      var id = tab.getAttribute("aria-controls");
+      var panel = id && document.getElementById(id);
+      if (panel != null) {
+        panel.hidden = id !== panelId;
+        if (!panel.hidden && selected.id) {
+          panel.setAttribute("aria-labelledby", selected.id);
+        }
+      }
+    }
+  };
+  var interact = function (event) {
+    var tab = event.target && event.target.closest ? event.target.closest(selector) : null;
+    if (event.defaultPrevented || tab == null || tab.matches(disabled)) return;
+    if (event.type === "click") { selectTab(tab); return; }
+  };
+  var lists = document.querySelectorAll('.nav[role="tablist"]');
+  for (var j = 0; j < lists.length; j++) {
+    var selected =
+      lists[j].querySelector('[role="tab"][aria-selected="true"]') ||
+      lists[j].querySelector('[role="tab"].active') ||
+      lists[j].querySelector('[role="tab"]');
+    if (selected != null) selectTab(selected);
+  }
+  document.addEventListener("click", interact);
+}
+initVizTabs();
+if (window.lucide) {
+  lucide.createIcons({ attrs: { width: 16, height: 16 } });
+}
+</script>
+</body>
+</html>
